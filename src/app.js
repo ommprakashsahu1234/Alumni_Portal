@@ -49,8 +49,8 @@ hbs.registerPartials(partialsPath);
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "ommprakashsahu.work@gmail.com",
-    pass: "fqse llhq apkw cnfo",
+    user: "<Your EMail ID>",
+    pass: "<App Password for EMail ID>",
   },
 });
 
