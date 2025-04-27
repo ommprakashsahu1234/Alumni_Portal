@@ -33,7 +33,7 @@ app.use(cookieParser());
 app.set("view engine", "hbs");
 require("./db/conn");
 app.use(express.urlencoded({ extended: false }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.set("views", path.join(__dirname, "/template/views"));
 const partialsPath = path.join(__dirname, "./template/partials/");
@@ -49,8 +49,8 @@ hbs.registerPartials(partialsPath);
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "<Your EMail ID>",
-    pass: "<App Password for EMail ID>",
+    user: "<Your Mail ID>",
+    pass: "<Your App Password>",
   },
 });
 
@@ -86,6 +86,95 @@ const Poststorage = multer.diskStorage({
 const uploadprofile = multer({ storage: Profilestorage });
 const uploadpost = multer({ storage: Poststorage });
 const uploadcsv = multer({ storage: AdminCSVStorage });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+const deleteProfileImage = (rollno) => {
+  const uploadsDir = path.join(__dirname, './uploads/profileimgs'); 
+  const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+  for (const ext of possibleExts) {
+    const filePath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.log('Error deleting file:', err);
+        } else {
+          console.log(`Profile image for rollno ${rollno} has been deleted.`);
+        }
+      });
+      break; 
+    }
+  }
+};
+const deleteImageDatas = (rollno) => {
+  const uploadsProfileDir = path.join(__dirname, './uploads/profileimgs');
+  const uploadsPostsDir = path.join(__dirname, './uploads/posts');
+  
+  const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+  
+  // Delete profile image
+  for (const ext of possibleExts) {
+    const profileImagePath = path.join(uploadsProfileDir, `${rollno}-profile_img${ext}`);
+    
+    if (fs.existsSync(profileImagePath)) {
+      fs.unlink(profileImagePath, (err) => {
+        if (err) {
+          console.log('Error deleting profile image:', err);
+        } else {
+          console.log(`Profile image for rollno ${rollno} has been deleted.`);
+        }
+      });
+      break; // Exit after deleting the profile image
+    }
+  }
+
+  // Delete posts related to this alumni (check if filename starts with rollno)
+  fs.readdir(uploadsPostsDir, (err, files) => {
+    if (err) {
+      console.log('Error reading posts directory:', err);
+      return;
+    }
+
+    // Filter and delete files that start with the rollno
+    files.forEach((file) => {
+      if (file.startsWith(rollno)) {
+        const postFilePath = path.join(uploadsPostsDir, file);
+
+        fs.unlink(postFilePath, (err) => {
+          if (err) {
+            console.log('Error deleting post image:', err);
+          } else {
+            console.log(`Post image for rollno ${rollno} has been deleted: ${file}`);
+          }
+        });
+      }
+    });
+  });
+};
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -190,17 +279,17 @@ app.post('/registertest', async (req, res) => {
     res.cookie("branchToken", branchToken, { maxAge: 3600000, httpOnly: true });
     res.cookie("verifyToken", verifyToken, { maxAge: 3600000, httpOnly: true });
     fs.appendFileSync('./uploads/Admin/Users.csv', `${rollno} , Passed Pre Registration , ${timeStr} \n`)
-    
-    const RegisteredUserCount = await Register.countDocuments({rollno:rollcap})
-    if(RegisteredUserCount>0){
+
+    const RegisteredUserCount = await Register.countDocuments({ rollno: rollcap })
+    if (RegisteredUserCount > 0) {
       res.render('preregisteralumni', {
         warn: "Already Registered before !"
       });
     }
-    else{
+    else {
       res.redirect(`/register?nameValue=${name}&rollnoValue=${rollno}&batchValue=${batch}&branchValue=${branch}`);
     }
-    
+
   } else {
     res.render('preregisteralumni', {
       warn: "Not Verified as an Alumni"
@@ -396,6 +485,42 @@ app.post("/register", uploadprofile.single("profileimg"), async (req, res) => {
 //
 //
 
+app.get('/profile-picture', async (req, res) => {
+  const token = req.cookies.userToken;
+  if (tokenStore.has(token)) {
+    const rollno = tokenStore.get(token);
+    const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
+    let filePath = '';
+    const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const defaultPath = path.join(uploadsDir, `default.png`);
+    for (const ext of possibleExts) {
+      const tempPath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
+    if (filePath) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(defaultPath)
+    }
+  }
+  else {
+
+  }
+})
+
+
+//
+//
+//
+//
+//
+//
+//
+//
+
 app.get("/home", async (req, res) => {
   const token = req.cookies.userToken;
   if (tokenStore.has(token)) {
@@ -422,6 +547,7 @@ app.get("/home", async (req, res) => {
     const userPost = await Post.find(
       {},
       {
+        _id: 1,
         rollno: 1,
         dateandtime: 1,
         head: 1,
@@ -463,6 +589,52 @@ app.get("/home", async (req, res) => {
     });
   }
 });
+
+//
+//
+//
+//
+//
+//
+//
+//
+
+app.get('/:postid/content-image', async (req, res) => {
+  const token = req.cookies.userToken;
+  
+  // Check if the user is authenticated
+  if (tokenStore.has(token)) {
+    const rollno = tokenStore.get(token);
+    const { postid } = req.params;
+
+    try {
+      // Query the post using the postid
+      const post = await Post.findById(postid);
+      const postImagePath = post.postimage;
+
+      if (!postImagePath) {
+        return res.status(404).send("No image available for this post.");
+      }
+
+      const uploadsDir = path.join(__dirname, '/uploads/posts');
+      const filePath = path.join(uploadsDir, postImagePath); 
+
+      // Check if the file exists on the server
+      if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+      } else {
+        return res.status(404).send("Image not found on server.");
+      }
+    } catch (err) {
+      console.error(err);
+      return res.status(500).send("Error retrieving post image.");
+    }
+  } else {
+    // Handle case where user is not logged in
+    return res.status(401).render("login", { warn: "Login to access this page." });
+  }
+});
+
 
 //
 //
@@ -613,6 +785,34 @@ app.get("/alumnidata", async (req, res) => {
     });
   }
 });
+
+
+
+app.get('/:rollno/profile-picture', async (req, res) => {
+  const token = req.cookies.userToken;
+  if (tokenStore.has(token)) {
+    const { rollno } = req.params
+    const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
+    let filePath = '';
+    const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const defaultPath = path.join(uploadsDir, `default.png`);
+    for (const ext of possibleExts) {
+      const tempPath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
+    if (filePath) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(defaultPath)
+    }
+  }
+  else {
+
+  }
+})
 
 //
 //
@@ -767,7 +967,7 @@ app.post("/post", uploadpost.array("postimg"), async (req, res) => {
           if (err) console.error("Error deleting temp file:", err);
         });
 
-        postPath = `/uploads/posts/${newFilename}`;
+        postPath = `${newFilename}`;
         const newPost = new Post({
           rollno: rollno,
           dateandtime: getTime(),
@@ -775,7 +975,7 @@ app.post("/post", uploadpost.array("postimg"), async (req, res) => {
           text: postObj,
           postimage: postPath,
         });
-  
+
         await newPost.save();
         fs.appendFileSync('./uploads/Admin/Users.csv', `${rollno} , Posted a new Post (${newFilename}) , ${timeStr} \n`)
         res.render("post", {
@@ -786,7 +986,7 @@ app.post("/post", uploadpost.array("postimg"), async (req, res) => {
     } catch (err) {
       console.error("Error creating post:", err);
       res.render("post", {
-        warn:"Unable to Post."
+        warn: "Unable to Post."
       });
     }
   } else {
@@ -1550,6 +1750,7 @@ app.post('/alumnisorted', async (req, res) => {
     if (req.body) {
       const { field, value } = req.body;
       let users = []; // Define users array before conditions
+      const alumniroll = 1
 
       if (field === 'cname') {
         const val = value.trim().toUpperCase();
@@ -1615,6 +1816,46 @@ app.post('/alumnisorted', async (req, res) => {
 });
 
 
+//
+//
+//
+//
+//
+//
+//
+app.get('/sortedalumnis/:alumniroll/profile-picture', (req, res) => {
+  const token = req.cookies.userToken;
+  const { alumniroll } = req.params;
+
+  if (tokenStore.has(token)) {
+    const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
+    let filePath = '';
+    const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const defaultPath = path.join(uploadsDir, `default.png`);
+
+    // Check for the existence of the profile image
+    for (const ext of possibleExts) {
+      const tempPath = path.join(uploadsDir, `${alumniroll}-profile_img${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
+
+    // Serve the image or default if not found
+    if (filePath) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(defaultPath);  // Serve default image if no profile found
+    }
+  } else {
+    res.render("loginalumni", { warn: "Login to access that page." });
+  }
+});
+
+//
+//
+//
 //
 //
 //
@@ -2029,6 +2270,33 @@ app.get('/headadmin/modifyalumni', async (req, res) => {
     })
   }
 });
+app.get('/headadmin/:rollno/profile-picture', async (req, res) => {
+  const token = req.cookies.headAdmToken;
+  if (tokenStore.has(token)) {
+    const hadmid = tokenStore.get(token);
+    const { rollno } = req.params; // Correctly destructure rollno from params
+    const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
+    let filePath = '';
+    const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const defaultPath = path.join(uploadsDir, `default.png`);
+    for (const ext of possibleExts) {
+      const tempPath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
+    if (filePath) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(defaultPath);
+    }
+  } else {
+    // If the token is not found, you can handle that case (e.g., redirect to login)
+    res.status(403).send('Unauthorized');
+  }
+});
+
 
 app.get('/headadmin/editalumni/:rollno', async (req, res) => {
   const token = req.cookies.headAdmToken;
@@ -2212,15 +2480,16 @@ app.get('/headadmin/deletealumni/:rollno', async (req, res) => {
 
   if (tokenStore.has(token)) {
     const hadmid = tokenStore.get(token);
-
-    const DeleteAdmin = await Register.deleteOne({ rollno: req.params.rollno });
-    if (DeleteAdmin) {
-      const userget = await Register.findOne({ rollno: rollno }, { mailid: 1, password: 1, name: 1 })
+    const {rollno} = req.params
+    const userget = await Register.findOne({ rollno: rollno }, { mailid: 1, password: 1, name: 1 })
       const mailid = userget.mailid
       const password = userget.password
       const name = userget.name
+    const DeleteAlumni = await Register.deleteOne({ rollno: req.params.rollno });
+    if (DeleteAlumni) {
+      
       fs.appendFileSync('./uploads/Admin/Admins.csv', `${hadmid} , Deleted Alumni(${req.params.rollno}) , ${timeStr} \n`)
-
+      deleteImageDatas(rollno) 
       const mailOptions = {
         from: "ommprakashsahu.work@gmail.com", // Sender address
         to: `${mailid}`, // Receiver email
@@ -2230,13 +2499,13 @@ app.get('/headadmin/deletealumni/:rollno', async (req, res) => {
         if (error) {
           console.log("Error:", error);
         } else {
-          console.log("Email sent:", info.response);
+          console.log("Email sent:", info.response)
         }
       });
     }
     res.redirect('/headadmin/modifyalumni');
   } else {
-    res.redirect('/headadmin/login');
+    res.redirect('/headadmin')
   }
 });
 
@@ -2285,7 +2554,52 @@ app.get('/headadmin/mailalumni/:rollno', async (req, res) => {
   } else {
     res.redirect('/headadmin');
   }
-});
+})
+//
+//
+//
+//
+//
+//
+//
+//
+//
+app.get('headadmin/:rollno/profile-picture', async (req, res) => {
+  const token = req.cookies.headAdmToken;
+  if (tokenStore.has(token)) {
+    const {rollno} = req.params
+    const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
+    let filePath = '';
+    const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const defaultPath = path.join(uploadsDir, `default.png`);
+    for (const ext of possibleExts) {
+      const tempPath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
+    if (filePath) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(defaultPath)
+    }
+  }
+  else {
+
+  }
+})
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 app.post('/headadmin/mailalumni/:rollno', async (req, res) => {
   const token = req.cookies.headAdmToken;
@@ -2598,10 +2912,11 @@ app.get("/freeupspace", async (req, res) => {
     const files3 = await fs.promises.readdir(directory3);
 
     // Filter the files to delete
-    const tempFiles = files1.filter(file => file.startsWith("temp")) && files3.filter(file => file.startsWith("temp"));
+    const tempFile1 = files1.filter(file => file.startsWith("temp")) 
+    const tempFile2 = files3.filter(file => file.startsWith("temp"));
     const csvFiles = files2.filter(file => file.startsWith("Admin-FileUpload"));
 
-    if (tempFiles.length === 0 && csvFiles.length === 0) {
+    if (tempFile1.length === 0 && csvFiles.length === 0 && tempFile2.length === 0 ) {
       return res.render('headadminactions', { success: "No Junk files to free up!" });
     }
 
@@ -2610,7 +2925,6 @@ app.get("/freeupspace", async (req, res) => {
       return Promise.all(files.map(async (file) => {
         try {
           await fs.promises.unlink(path.join(directory, file));
-          console.log(`Deleted: ${file}`);
         } catch (err) {
           console.error(`Error deleting ${file}:`, err);
         }
@@ -2618,9 +2932,9 @@ app.get("/freeupspace", async (req, res) => {
     };
 
     // Delete files in both directories
-    await deleteFiles(directory1, tempFiles);
+    await deleteFiles(directory1, tempFile1);
     await deleteFiles(directory2, csvFiles);
-    await deleteFiles(directory3, tempFiles);
+    await deleteFiles(directory3, tempFile2);
     fs.appendFileSync('./uploads/Admin/Admins.csv', `${hadmid} , Freed Up Space , ${timeStr}  \n`)
     res.render('headadminactions', { success: "Space Freed Up!" });
   } catch (err) {
