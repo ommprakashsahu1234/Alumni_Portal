@@ -46,11 +46,12 @@ hbs.registerHelper("eq", function (a, b) {
 app.use(express.static(staticPath));
 hbs.registerPartials(partialsPath);
 
+const mailSender = '<Mail ID>'
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "<Your Mail ID>",
-    pass: "<Your App Password>",
+    user: mailSender,
+    pass: "<App Password>",
   },
 });
 
@@ -98,7 +99,7 @@ const uploadcsv = multer({ storage: AdminCSVStorage });
 //
 
 const deleteProfileImage = (rollno) => {
-  const uploadsDir = path.join(__dirname, './uploads/profileimgs'); 
+  const uploadsDir = path.join(__dirname, './uploads/profileimgs');
   const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
   for (const ext of possibleExts) {
     const filePath = path.join(uploadsDir, `${rollno}-profile_img${ext}`);
@@ -111,20 +112,20 @@ const deleteProfileImage = (rollno) => {
           console.log(`Profile image for rollno ${rollno} has been deleted.`);
         }
       });
-      break; 
+      break;
     }
   }
 };
 const deleteImageDatas = (rollno) => {
   const uploadsProfileDir = path.join(__dirname, './uploads/profileimgs');
   const uploadsPostsDir = path.join(__dirname, './uploads/posts');
-  
+
   const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
-  
+
   // Delete profile image
   for (const ext of possibleExts) {
     const profileImagePath = path.join(uploadsProfileDir, `${rollno}-profile_img${ext}`);
-    
+
     if (fs.existsSync(profileImagePath)) {
       fs.unlink(profileImagePath, (err) => {
         if (err) {
@@ -421,7 +422,7 @@ app.post("/register", uploadprofile.single("profileimg"), async (req, res) => {
             const password = userget.password
             const name = userget.name
             const mailOptions = {
-              from: "ommprakashsahu.work@gmail.com", // Sender address
+              from: mailSender, // Sender address
               to: `${mailid}`, // Receiver email
               subject: "GITA Alumni Portal", // Email subject
               text: `Dear ${name}, Thankyou for registering on our portal\nrollno:${roll}\nPassword:${password}\nWait for Admin Approval. After the Admin Approves , you will get a mail.`, // Plain text body
@@ -446,7 +447,7 @@ app.post("/register", uploadprofile.single("profileimg"), async (req, res) => {
               const password = userget.password
               const name = userget.name
               const mailOptions = {
-                from: "ommprakashsahu.work@gmail.com", // Sender address
+                from: mailSender, // Sender address
                 to: `${mailid}`, // Receiver email
                 subject: "GITA Alumni Portal", // Email subject
                 text: `Dear ${name}, Thankyou for registering on our portal\nrollno:${roll}\nPassword:${password}.`, // Plain text body
@@ -543,7 +544,7 @@ app.get("/home", async (req, res) => {
         company: 1
       }
     );
-    const addressString = ` ${user.address.district},${user.address.state} , ${user.address.pincode}, `;
+    const addressString = ` ${user.address.district} , ${user.address.state} , ${user.address.pincode}, `;
     const userPost = await Post.find(
       {},
       {
@@ -601,7 +602,7 @@ app.get("/home", async (req, res) => {
 
 app.get('/:postid/content-image', async (req, res) => {
   const token = req.cookies.userToken;
-  
+
   // Check if the user is authenticated
   if (tokenStore.has(token)) {
     const rollno = tokenStore.get(token);
@@ -617,7 +618,7 @@ app.get('/:postid/content-image', async (req, res) => {
       }
 
       const uploadsDir = path.join(__dirname, '/uploads/posts');
-      const filePath = path.join(uploadsDir, postImagePath); 
+      const filePath = path.join(uploadsDir, postImagePath);
 
       // Check if the file exists on the server
       if (fs.existsSync(filePath)) {
@@ -659,7 +660,7 @@ app.post('/forgotpassword', async (req, res) => {
     console.log(mailid)
     try {
       const mailOptions = {
-        from: "ommprakashsahu.work@gmail.com", // Sender address
+        from: mailSender, // Sender address
         to: `${mailid}`, // Receiver email
         subject: "GITA Alumni Portal", // Email subject
         text: `Your Password is : ${pass}`, // Plain text body
@@ -887,7 +888,7 @@ app.post("/registercomplaint", async (req, res) => {
         const password = userget.password
         const name = userget.name
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, Complaint Registered.\nCID:${complaintId}`, // Plain text body
@@ -1044,7 +1045,7 @@ app.post("/post", uploadpost.array("postimg"), async (req, res) => {
 //         const password = userget.password
 //         const name = userget.name
 //         const mailOptions = {
-//           from: "ommprakashsahu.work@gmail.com", // Sender address
+//           from: mailSender, // Sender address
 //           to: `${mailid}`, // Receiver email
 //           subject: "GITA Alumni Portal", // Email subject
 //           text: `Your Account is deleted.`, // Plain text body
@@ -1331,7 +1332,7 @@ app.post("/update", async (req, res) => {
         const password = userget.password
         const name = userget.name
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, Profile Updated.\nThankyou.`, // Plain text body
@@ -1466,7 +1467,7 @@ app.post("/approve", async (req, res) => {
         const password = userget.password
         const name = userget.name
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, Your Account is Approved. You can Login to your account now.\nRollno : ${rollno}, Password : ${password}\nThankyou.`, // Plain text body
@@ -1508,7 +1509,7 @@ app.post("/reject", async (req, res) => {
         const password = userget.password
         const name = userget.name
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, Your Profile is rejected of Rollno : ${rollno}.\nThankyou.`, // Plain text body
@@ -1615,7 +1616,7 @@ app.post("/instadmin/replycomplaints", async (req, res) => {
         const name = userget.name
         fs.appendFileSync('./uploads/Admin/Admins.csv', `${iadmid}} , Replied to Complaint ${complaintId} , ${timeStr} , Response :${response} Status :${complaintStatus} , \n`)
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, You have got a response from the Admin on your complaint. Login and check the response.\nThankyou.`, // Plain text body
@@ -2147,7 +2148,7 @@ app.post("/headadmin/replycomplaints", async (req, res) => {
         const name = userget.name
         fs.appendFileSync('./uploads/Admin/Admins.csv', `${hadmid} , Replied to Alumni Complaint(${complaintId}) , ${timeStr} , Response : ${response} Status:${complaintStatus}\n`)
         const mailOptions = {
-          from: "ommprakashsahu.work@gmail.com", // Sender address
+          from: mailSender, // Sender address
           to: `${mailid}`, // Receiver email
           subject: "GITA Alumni Portal", // Email subject
           text: `Dear ${name}, You have got a response from the Admin on your complaint. Login and check the response.\nThankyou`, // Plain text body
@@ -2446,7 +2447,7 @@ app.post('/headadmin/editalumni/:rollno', async (req, res) => {
   }
 
   const mailOptions = {
-    from: "ommprakashsahu.work@gmail.com",
+    from: mailSender,
     to: updatedUser.mailid,
     subject: "GITA Alumni Portal",
     text: `Dear ${updatedUser.name}, Your details have been updated by the Admin.\nThank you.`,
@@ -2480,18 +2481,38 @@ app.get('/headadmin/deletealumni/:rollno', async (req, res) => {
 
   if (tokenStore.has(token)) {
     const hadmid = tokenStore.get(token);
-    const {rollno} = req.params
+    const { rollno } = req.params
     const userget = await Register.findOne({ rollno: rollno }, { mailid: 1, password: 1, name: 1 })
-      const mailid = userget.mailid
-      const password = userget.password
-      const name = userget.name
+    const mailid = userget.mailid
+    const password = userget.password
+    const name = userget.name
     const DeleteAlumni = await Register.deleteOne({ rollno: req.params.rollno });
+    const delPost = await Post.deleteMany({ rollno: rollno });
+    if (delPost.deletedCount > 0) {
+      console.log(`No of posts deleted : ${delPost.deletedCount}`);
+    }
+    const delComplaint = await Complaint.deleteMany({ rollno: rollno });
+    if (delComplaint.deletedCount > 0) {
+      console.log(`No of Complaints Deleted : ${delComplaint.deletedCount}`);
+    }
+    const delQueries = await Query.deleteMany({ rollno: rollno });
+    if (delQueries.deletedCount > 0) {
+      console.log(`No of Complaints Deleted : ${delQueries.deletedCount}`);
+    }
+    const delQueryComments = await Query.updateMany(
+      { "replies.rollno": rollno },
+      { $pull: { replies: { rollno: rollno } } }
+    );
+    const delPostComments = await Post.updateMany(
+      { "comments.author": rollno },
+      { $pull: { comments: { author: rollno } } }
+    );
     if (DeleteAlumni) {
-      
+
       fs.appendFileSync('./uploads/Admin/Admins.csv', `${hadmid} , Deleted Alumni(${req.params.rollno}) , ${timeStr} \n`)
-      deleteImageDatas(rollno) 
+      deleteImageDatas(rollno)
       const mailOptions = {
-        from: "ommprakashsahu.work@gmail.com", // Sender address
+        from: mailSender, // Sender address
         to: `${mailid}`, // Receiver email
         subject: "GITA Alumni Portal", // Email subject
         text: `Dear ${name}, Your Profile has been deleted by the admin.\nThankyou.`, // Plain text body
@@ -2567,7 +2588,7 @@ app.get('/headadmin/mailalumni/:rollno', async (req, res) => {
 app.get('headadmin/:rollno/profile-picture', async (req, res) => {
   const token = req.cookies.headAdmToken;
   if (tokenStore.has(token)) {
-    const {rollno} = req.params
+    const { rollno } = req.params
     const uploadsDir = path.join(__dirname, '/uploads/profileimgs');
     let filePath = '';
     const possibleExts = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -2614,7 +2635,7 @@ app.post('/headadmin/mailalumni/:rollno', async (req, res) => {
     const mailid = user.mailid
     console.log(user.mailid);
     const mailOptions = {
-      from: "ommprakashsahu.work@gmail.com", // Sender address
+      from: mailSender, // Sender address
       to: `${mailid}`, // Receiver email
       subject: "GITA Alumni Portal", // Email subject
       text: `${msg}`, // Plain text body
@@ -2681,7 +2702,7 @@ app.post('/headadmin/massmailalumnis', async (req, res) => {
 
     const msg = req.body.message;
     const mailOptions = {
-      from: "ommprakashsahu.work@gmail.com", // Sender address
+      from: mailSender, // Sender address
       bcc: emailList, // Sending as BCC to all alumni
       subject: "GITA Alumni Portal", // Email subject
       text: msg, // Email body
@@ -2912,11 +2933,11 @@ app.get("/freeupspace", async (req, res) => {
     const files3 = await fs.promises.readdir(directory3);
 
     // Filter the files to delete
-    const tempFile1 = files1.filter(file => file.startsWith("temp")) 
+    const tempFile1 = files1.filter(file => file.startsWith("temp"))
     const tempFile2 = files3.filter(file => file.startsWith("temp"));
     const csvFiles = files2.filter(file => file.startsWith("Admin-FileUpload"));
 
-    if (tempFile1.length === 0 && csvFiles.length === 0 && tempFile2.length === 0 ) {
+    if (tempFile1.length === 0 && csvFiles.length === 0 && tempFile2.length === 0) {
       return res.render('headadminactions', { success: "No Junk files to free up!" });
     }
 
